@@ -77,7 +77,7 @@ export default function App() {
   const [showLinkedDoctorsModal, setShowLinkedDoctorsModal] = useState(false);
   const [authRole, setAuthRole] = useState<'none' | 'patient' | 'doctor' | 'admin'>(() => {
     const saved = localStorage.getItem('safah_auth_role');
-    return (saved as 'none' | 'patient' | 'doctor' | 'admin') || 'none';
+    return (saved as 'none' | 'patient' | 'doctor' | 'admin') || 'patient';
   });
 
   // Live Telemetry Stream state (Smart Biometric Patch)
