@@ -1,0 +1,8 @@
+{
+  "name": "+CareBridge",
+  "description": "Multicultural post-hospital discharge roadmap, medication alarm system, and objective symptom tracker for Arab & Gulf hospitals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
