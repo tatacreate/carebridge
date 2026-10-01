@@ -170,3 +170,16 @@ export interface FAQItem {
   answer: Record<Language, string>;
 }
 
+export interface PrescriptionRequest {
+  id: string;
+  medicineName: string;
+  dosage: string;
+  times: string[];
+  instructions: string;
+  notes: string;
+  status: 'pending' | 'approved' | 'disapproved';
+  prescriptionImageUrl?: string;
+  requestedAt: string;
+}
+
+

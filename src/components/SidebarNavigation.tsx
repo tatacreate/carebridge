@@ -17,6 +17,8 @@ import {
   Stethoscope,
   LogOut,
   Fingerprint,
+  Sparkles,
+  Camera,
 } from 'lucide-react';
 import { Language, PatientProfile } from '../types';
 import { getTranslation } from '../data/translations';
@@ -28,7 +30,9 @@ export type TabKey =
   | 'alarms'
   | 'roadmap'
   | 'symptoms'
-  | 'settings';
+  | 'settings'
+  | 'ai_companion'
+  | 'prescription_scanner';
 
 interface SidebarNavigationProps {
   currentLang: Language;
@@ -85,6 +89,18 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
       label: getTranslation(currentLang, 'tabSymptomChecker') || 'Symptom Tracker',
       icon: Activity,
       desc: 'Objective recovery check-ins',
+    },
+    {
+      key: 'ai_companion' as TabKey,
+      label: 'AI Health Companion',
+      icon: Sparkles,
+      desc: 'Compassionate medical AI helper',
+    },
+    {
+      key: 'prescription_scanner' as TabKey,
+      label: 'AI Prescription Scan',
+      icon: Camera,
+      desc: 'Scan prescription to request rx',
     },
   ];
 

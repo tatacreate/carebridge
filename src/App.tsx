@@ -22,6 +22,7 @@ import {
   PatientProfile,
   RoadmapDay,
   SymptomAssessment,
+  PrescriptionRequest,
 } from './types';
 
 import { LANGUAGES, getTranslation } from './data/translations';
@@ -52,6 +53,8 @@ import { UnifiedLandingRoleSelection } from './components/UnifiedLandingRoleSele
 import { LinkedDoctorsPanelModal } from './components/LinkedDoctorsPanelModal';
 import { DoctorPortalLayout } from './components/DoctorPortalLayout';
 import { HospitalAdminPortal } from './components/HospitalAdminPortal';
+import { AiCompanion } from './components/AiCompanion';
+import { PrescriptionScannerView } from './components/PrescriptionScannerView';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import {
   calculateAge,
@@ -63,10 +66,19 @@ import {
 
 export default function App() {
   // Primary App State
-  const [currentLang, setCurrentLang] = useState<Language>('ar'); // Default Arabic for Gulf/Saudi context
-  const [activeTab, setActiveTab] = useState<TabKey>('home');
+  const [currentLang, setCurrentLang] = useState<Language>(() => {
+    const saved = localStorage.getItem('safah_current_lang');
+    return (saved as Language) || 'ar';
+  });
+  const [activeTab, setActiveTab] = useState<TabKey>(() => {
+    const saved = localStorage.getItem('safah_active_tab');
+    return (saved as TabKey) || 'home';
+  });
   const [showLinkedDoctorsModal, setShowLinkedDoctorsModal] = useState(false);
-  const [authRole, setAuthRole] = useState<'none' | 'patient' | 'doctor' | 'admin'>('none');
+  const [authRole, setAuthRole] = useState<'none' | 'patient' | 'doctor' | 'admin'>(() => {
+    const saved = localStorage.getItem('safah_auth_role');
+    return (saved as 'none' | 'patient' | 'doctor' | 'admin') || 'none';
+  });
 
   // Live Telemetry Stream state (Smart Biometric Patch)
   const [telemetry, setTelemetry] = useState({
@@ -171,6 +183,11 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [prescriptionRequests, setPrescriptionRequests] = useState<PrescriptionRequest[]>(() => {
+    const saved = localStorage.getItem('safah_approval_requests');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [doctorRoster, setDoctorRoster] = useState<PatientProfile[]>(() => {
     const saved = localStorage.getItem('safah_doctor_roster');
     if (saved) {
@@ -194,6 +211,9 @@ export default function App() {
   const handleLogout = () => {
     setAuthRole('none');
     localStorage.setItem('safah_authed', 'false');
+    localStorage.removeItem('safah_auth_role');
+    localStorage.removeItem('safah_current_lang');
+    localStorage.removeItem('safah_active_tab');
     localStorage.removeItem('safah_patient');
     localStorage.removeItem('safah_current_doctor');
     localStorage.removeItem('safah_meds');
@@ -201,11 +221,13 @@ export default function App() {
     localStorage.removeItem('safah_logs');
     localStorage.removeItem('safah_assessments');
     localStorage.removeItem('safah_caregivers');
+    localStorage.removeItem('safah_approval_requests');
     setPatient(DEFAULT_PATIENT);
     setMedications(DEFAULT_MEDICATIONS);
     setDays(DEFAULT_ROADMAP_DAYS);
     setDoseLogs([]);
     setSymptomAssessments([]);
+    setActiveTab('home');
   };
 
   // Clean up any previously stored fake accounts from localStorage on app boot
@@ -277,6 +299,22 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('safah_assessments', JSON.stringify(symptomAssessments));
   }, [symptomAssessments]);
+
+  useEffect(() => {
+    localStorage.setItem('safah_approval_requests', JSON.stringify(prescriptionRequests));
+  }, [prescriptionRequests]);
+
+  useEffect(() => {
+    localStorage.setItem('safah_auth_role', authRole);
+  }, [authRole]);
+
+  useEffect(() => {
+    localStorage.setItem('safah_current_lang', currentLang);
+  }, [currentLang]);
+
+  useEffect(() => {
+    localStorage.setItem('safah_active_tab', activeTab);
+  }, [activeTab]);
 
   // Update HTML text direction (RTL for Arabic/Urdu, LTR for English/Tagalog)
   useEffect(() => {
@@ -402,6 +440,40 @@ export default function App() {
 
   const handleSaveAssessment = (assessment: SymptomAssessment) => {
     setSymptomAssessments([assessment, ...symptomAssessments]);
+  };
+
+  const handleApprovePrescriptionRequest = (req: PrescriptionRequest) => {
+    // 1. Mark request as approved
+    const updatedRequests = prescriptionRequests.map((r) =>
+      r.id === req.id ? { ...r, status: 'approved' as const } : r
+    );
+    setPrescriptionRequests(updatedRequests);
+
+    // 2. Create the new medication
+    const newMed: Medication = {
+      id: `med-${Date.now()}`,
+      name: req.medicineName,
+      dosage: req.dosage || '1 unit',
+      frequency: 'Approved via AI Scan',
+      times: req.times && req.times.length > 0 ? req.times : ['09:00'],
+      foodInstruction: 'after_food',
+      notes: req.notes || req.instructions || 'Approved via AI scanned prescription',
+      pillColor: '#0f766e',
+      active: true,
+      iconType: 'pill',
+    };
+
+    // 3. Add to medications list
+    const updatedMeds = [...medications, newMed];
+    setMedications(updatedMeds);
+    localStorage.setItem('safah_meds', JSON.stringify(updatedMeds));
+  };
+
+  const handleDisapprovePrescriptionRequest = (requestId: string) => {
+    const updatedRequests = prescriptionRequests.map((r) =>
+      r.id === requestId ? { ...r, status: 'disapproved' as const } : r
+    );
+    setPrescriptionRequests(updatedRequests);
   };
 
   return (
@@ -538,6 +610,9 @@ export default function App() {
           days={days}
           doseLogs={doseLogs}
           symptomAssessments={symptomAssessments}
+          prescriptionRequests={prescriptionRequests}
+          onApprovePrescriptionRequest={handleApprovePrescriptionRequest}
+          onDisapprovePrescriptionRequest={handleDisapprovePrescriptionRequest}
           onSelectPatient={(selectedP) => {
             setPatient(selectedP);
             localStorage.setItem('safah_patient', JSON.stringify(selectedP));
@@ -705,6 +780,26 @@ export default function App() {
                 currentLang={currentLang}
                 patient={patient}
                 onSaveAssessment={handleSaveAssessment}
+              />
+            )}
+
+            {activeTab === 'ai_companion' && (
+              <AiCompanion
+                currentLang={currentLang}
+                patient={patient}
+                medications={medications}
+                symptomHistory={symptomAssessments}
+              />
+            )}
+
+            {activeTab === 'prescription_scanner' && (
+              <PrescriptionScannerView
+                currentLang={currentLang}
+                patient={patient}
+                prescriptionRequests={prescriptionRequests}
+                onAddPrescriptionRequest={(req) => {
+                  setPrescriptionRequests([req, ...prescriptionRequests]);
+                }}
               />
             )}
           </main>

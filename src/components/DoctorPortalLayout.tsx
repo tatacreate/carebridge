@@ -30,7 +30,7 @@ import {
   Check,
   Fingerprint,
 } from 'lucide-react';
-import { Medication, PatientProfile, RoadmapDay, DoseLog, SymptomAssessment, Language } from '../types';
+import { Medication, PatientProfile, RoadmapDay, DoseLog, SymptomAssessment, Language, PrescriptionRequest } from '../types';
 import { AiMedicalReportAnalyzer, ExtractedReportData } from './AiMedicalReportAnalyzer';
 import { GoogleVerifiedBadge } from './GoogleVerifiedBadge';
 import { getAllPatients, savePatientToDb } from '../utils/userDatabase';
@@ -50,6 +50,9 @@ interface DoctorPortalLayoutProps {
   days: RoadmapDay[];
   doseLogs: DoseLog[];
   symptomAssessments: SymptomAssessment[];
+  prescriptionRequests?: PrescriptionRequest[];
+  onApprovePrescriptionRequest?: (req: PrescriptionRequest) => void;
+  onDisapprovePrescriptionRequest?: (id: string) => void;
   onSelectPatient: (patient: PatientProfile) => void;
   onUpdatePatient: (updated: PatientProfile) => void;
   onUpdateMedications: (meds: Medication[]) => void;
@@ -79,6 +82,9 @@ export const DoctorPortalLayout: React.FC<DoctorPortalLayoutProps> = ({
   days,
   doseLogs,
   symptomAssessments,
+  prescriptionRequests = [],
+  onApprovePrescriptionRequest,
+  onDisapprovePrescriptionRequest,
   onSelectPatient,
   onUpdatePatient,
   onUpdateMedications,
@@ -110,6 +116,51 @@ export const DoctorPortalLayout: React.FC<DoctorPortalLayoutProps> = ({
   const [newMedInstruction, setNewMedInstruction] = useState<
     'after_food' | 'before_food' | 'with_food' | 'empty_stomach'
   >('after_food');
+  const [isScanningPrescription, setIsScanningPrescription] = useState(false);
+
+  const handleDoctorPrescriptionScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsScanningPrescription(true);
+    showNotification('AI Scanning: Reading and analyzing prescription image with Gemini AI...');
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64WithHeader = reader.result as string;
+        const base64Data = base64WithHeader.split(',')[1];
+        const mimeType = file.type;
+
+        const response = await fetch('/api/gemini/analyze-prescription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            imageBase64: base64Data,
+            mimeType,
+          }),
+        });
+
+        const data = await response.json();
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        if (data.name) setNewMedName(data.name);
+        if (data.dosage) setNewMedDosage(data.dosage);
+        if (data.times) setNewMedTimes(data.times.join(', '));
+        showNotification('Gemini AI successfully analyzed & populated prescription details!');
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      console.error(err);
+      showNotification('AI Scan Failed: ' + (err.message || 'Error parsing image'));
+    } finally {
+      setIsScanningPrescription(false);
+    }
+  };
 
   const [notificationMsg, setNotificationMsg] = useState<string | null>(null);
   const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
@@ -800,6 +851,113 @@ export const DoctorPortalLayout: React.FC<DoctorPortalLayoutProps> = ({
                   </button>
                 </div>
               </div>
+              
+              {/* PENDING PATIENT PRESCRIPTION SCAN REQUESTS */}
+              {prescriptionRequests.some((req) => req.status === 'pending') && (
+                <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200 space-y-4">
+                  <div className="flex items-center gap-2 text-amber-800">
+                    <Sparkles className="w-5 h-5 text-amber-600 animate-pulse" />
+                    <span className="font-extrabold text-sm uppercase">
+                      Pending Patient Prescription Scan Requests
+                    </span>
+                  </div>
+                  <div className="space-y-3">
+                    {prescriptionRequests
+                      .filter((req) => req.status === 'pending')
+                      .map((req) => (
+                        <div
+                          key={req.id}
+                          className="bg-white p-4 rounded-xl border border-amber-200/80 space-y-3 text-xs shadow-2xs"
+                        >
+                          <div className="flex items-start justify-between gap-3 flex-wrap">
+                            <div>
+                              <span className="text-[10px] text-slate-400 font-bold block uppercase leading-none">Requested Medicine</span>
+                              <strong className="text-slate-900 text-sm font-black">{req.medicineName}</strong>
+                              <span className="text-slate-500 font-medium ml-1">({req.dosage})</span>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-bold">
+                              AI Analyzed Prescription
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-[11px] text-slate-600">
+                            <div>
+                              <strong className="text-slate-700">Times:</strong> {req.times.join(', ')}
+                            </div>
+                            <div>
+                              <strong className="text-slate-700">Instructions:</strong> {req.instructions || 'None'}
+                            </div>
+                            <div className="sm:col-span-2">
+                              <strong className="text-slate-700">Clinical Notes:</strong> {req.notes || 'None'}
+                            </div>
+                          </div>
+
+                          {req.prescriptionImageUrl && (
+                            <div className="space-y-1">
+                              <span className="text-[10px] text-slate-400 font-bold block uppercase leading-none">Attached Prescription Image</span>
+                              <div className="relative w-full max-w-[200px] h-32 rounded-lg overflow-hidden border border-slate-200 shadow-2xs group bg-slate-100">
+                                <img
+                                  src={req.prescriptionImageUrl}
+                                  alt="Prescription Scan"
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const win = window.open();
+                                      if (win) {
+                                        win.document.write(`
+                                          <html>
+                                            <head><title>Prescription Image</title></head>
+                                            <body style="margin:0;display:flex;align-items:center;justify-center;background:#000;">
+                                              <img src="${req.prescriptionImageUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;"/>
+                                            </body>
+                                          </html>
+                                        `);
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 text-[10px] bg-white text-slate-900 rounded-md font-bold shadow-sm"
+                                  >
+                                    View Full Screen
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-2 justify-end pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (onDisapprovePrescriptionRequest) {
+                                  onDisapprovePrescriptionRequest(req.id);
+                                  showNotification('Prescription addition request disapproved.');
+                                }
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 font-bold transition text-[11px]"
+                            >
+                              Disapprove
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (onApprovePrescriptionRequest) {
+                                  onApprovePrescriptionRequest(req);
+                                  showNotification(`Approved & added "${req.medicineName}" to active prescriptions.`);
+                                }
+                              }}
+                              className="px-3.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-black transition text-[11px] shadow-sm flex items-center gap-1"
+                            >
+                              <Check className="w-3 h-3" />
+                              <span>Approve & Add Medication</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
 
               {/* Admission Reason Summary (if provided or extracted by AI) */}
               {activePatient.admissionReason && (
@@ -832,9 +990,23 @@ export const DoctorPortalLayout: React.FC<DoctorPortalLayoutProps> = ({
                   onSubmit={handleAddMed}
                   className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3 text-xs"
                 >
-                  <span className="font-bold text-slate-700 block text-[11px]">
-                    Prescribe New Medication for {activePatient.name}:
-                  </span>
+                  <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100">
+                    <span className="font-bold text-slate-700 block text-[11px]">
+                      Prescribe New Medication for {activePatient.name}:
+                    </span>
+                    <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 font-extrabold text-[11px] transition shadow-2xs">
+                      <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+                      <span>{isScanningPrescription ? 'AI Analyzing...' : 'AI Scan Prescription Picture'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        disabled={isScanningPrescription}
+                        onChange={handleDoctorPrescriptionScan}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                     <div>
