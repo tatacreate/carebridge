@@ -55,6 +55,7 @@ import { DoctorPortalLayout } from './components/DoctorPortalLayout';
 import { HospitalAdminPortal } from './components/HospitalAdminPortal';
 import { AiCompanion } from './components/AiCompanion';
 import { PrescriptionScannerView } from './components/PrescriptionScannerView';
+import { TutorialModal } from './components/TutorialModal';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import {
   calculateAge,
@@ -78,6 +79,18 @@ export default function App() {
   const [authRole, setAuthRole] = useState<'none' | 'patient' | 'doctor' | 'admin'>(() => {
     const saved = localStorage.getItem('safah_auth_role');
     return (saved as 'none' | 'patient' | 'doctor' | 'admin') || 'patient';
+  });
+
+  // Pill notification badge setting (Patient only, when medicine is active)
+  const [showPillNotification, setShowPillNotification] = useState<boolean>(() => {
+    const saved = localStorage.getItem('safah_show_pill_notif');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
+  // Onboarding Tutorial Modal state
+  const [showTutorialModal, setShowTutorialModal] = useState<boolean>(() => {
+    const saved = localStorage.getItem('safah_seen_tutorial');
+    return !saved;
   });
 
   // Live Telemetry Stream state (Smart Biometric Patch)
@@ -806,8 +819,8 @@ export default function App() {
         </div>
       )}
 
-      {/* Floating Recovery Badge Component */}
-      {authRole !== 'none' && medications.some((m) => m.active) && (
+      {/* Floating Recovery Badge Component (Patient Platform only, when pill notification is enabled and active medicine exists) */}
+      {authRole === 'patient' && showPillNotification && medications.some((m) => m.active) && (
         <FloatingRecoveryBadge
           currentLanguage={currentLang}
           medications={medications}
@@ -856,12 +869,13 @@ export default function App() {
           currentLang={currentLang}
           onSelectLang={setCurrentLang}
           patient={patient}
-          authRole={authRole === 'admin' ? 'none' : authRole}
+          authRole={authRole}
           medications={medications}
           onSave={(updatedPatient, updatedMeds) => {
             setPatient(updatedPatient);
             if (authRole === 'doctor') {
               setMedications(updatedMeds);
+              localStorage.setItem('safah_meds', JSON.stringify(updatedMeds));
             }
           }}
           onClose={() => setIsCustomizerOpen(false)}
@@ -869,6 +883,24 @@ export default function App() {
           onToggleSound={() => setSoundEnabled(!soundEnabled)}
           systemPermission={systemPermission}
           onRequestPermission={handleRequestPermission}
+          showPillNotification={showPillNotification}
+          onToggleShowPillNotification={() => {
+            const nextVal = !showPillNotification;
+            setShowPillNotification(nextVal);
+            localStorage.setItem('safah_show_pill_notif', JSON.stringify(nextVal));
+          }}
+          onOpenTutorial={() => setShowTutorialModal(true)}
+        />
+      )}
+
+      {/* Onboarding Tutorial Walkthrough Modal */}
+      {showTutorialModal && (
+        <TutorialModal
+          currentLang={currentLang}
+          onClose={() => {
+            setShowTutorialModal(false);
+            localStorage.setItem('safah_seen_tutorial', 'true');
+          }}
         />
       )}
 

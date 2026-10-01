@@ -13,6 +13,9 @@ import {
   Database,
   Cpu,
   RefreshCw,
+  Stethoscope,
+  Building,
+  Award,
 } from 'lucide-react';
 import { PatientProfile } from '../types';
 
@@ -40,43 +43,47 @@ export const HospitalAdminPortal: React.FC<HospitalAdminPortalProps> = ({
   const isRtl = currentLang === 'ar' || currentLang === 'ur';
   const [selectedLogTab, setSelectedLogTab] = useState<'security' | 'system'>('security');
 
-  // Hardcoded secondary mock patients for list to make it look full and functional
-  const mockSystemPatients = [
+  // Hospital Doctors Linked List (Admin perspective)
+  const hospitalDoctors = [
     {
-      name: activePatient.name || 'Khaled Al-Faisal',
-      mrn: activePatient.mrn || 'KFSH-MOCK-992',
-      heartRate: telemetry.heartRate,
-      temperature: telemetry.temperature,
-      status: telemetry.isAnomalySpiked ? 'critical' : 'stable',
-      patchBattery: '94%',
-      signalStrength: 'Excellent',
+      id: 'doc-01',
+      name: 'Dr. Sarah Al-Hazmi',
+      specialty: 'Post-Op Surgical Consultant',
+      department: 'Surgery & Outpatient Care',
+      patientsCount: 38,
+      licenseNo: 'SCFHS-998231',
+      status: 'On Duty (Active)',
+      email: 'sarah.hazmi@kfsh.edu.sa',
     },
     {
-      name: 'Yousef Al-Otaibi',
-      mrn: 'KFSH-812034',
-      heartRate: 74,
-      temperature: 36.7,
-      status: 'stable',
-      patchBattery: '88%',
-      signalStrength: 'Good',
+      id: 'doc-02',
+      name: 'Dr. Faisal Al-Ghamdi',
+      specialty: 'Cardiovascular Specialist',
+      department: 'Cardiology & Telemetry',
+      patientsCount: 45,
+      licenseNo: 'SCFHS-882104',
+      status: 'On Duty (Active)',
+      email: 'faisal.ghamdi@kfsh.edu.sa',
     },
     {
-      name: 'Sarah Al-Qahtani',
-      mrn: 'KFSH-981245',
-      heartRate: 81,
-      temperature: 36.9,
-      status: 'stable',
-      patchBattery: '12%',
-      signalStrength: 'Weak',
+      id: 'doc-03',
+      name: 'Dr. Nora Al-Subaie',
+      specialty: 'Clinical Pharmacist & Discharge Lead',
+      department: 'Pharmacy & Therapeutics',
+      patientsCount: 31,
+      licenseNo: 'SCFHS-771920',
+      status: 'In Surgery',
+      email: 'nora.subaie@kfsh.edu.sa',
     },
     {
-      name: 'Fatima Al-Sudairy',
-      mrn: 'KFSH-304918',
-      heartRate: 68,
-      temperature: 36.6,
-      status: 'stable',
-      patchBattery: '99%',
-      signalStrength: 'Excellent',
+      id: 'doc-04',
+      name: 'Dr. Tariq Al-Mutairi',
+      specialty: 'Emergency Medicine Attending',
+      department: 'Emergency & Critical Response',
+      patientsCount: 28,
+      licenseNo: 'SCFHS-662391',
+      status: 'On Duty (Active)',
+      email: 'tariq.mutairi@kfsh.edu.sa',
     },
   ];
 
@@ -99,14 +106,14 @@ export const HospitalAdminPortal: React.FC<HospitalAdminPortalProps> = ({
     {
       time: '05:44:30',
       event: 'Physician Medication Prescription Lock (Sign-off)',
-      user: 'sarah.mock@carebridge.org (Attending Consultant)',
+      user: 'sarah.hazmi@kfsh.edu.sa (Attending Consultant)',
       ip: '10.231.102.8',
       severity: 'warning',
     },
     {
       time: '05:40:12',
       event: 'AI Medical Report Intake Parsing Ingestion',
-      user: 'sarah.mock@carebridge.org',
+      user: 'sarah.hazmi@kfsh.edu.sa',
       ip: '10.231.102.8',
       severity: 'info',
     },
@@ -133,16 +140,15 @@ export const HospitalAdminPortal: React.FC<HospitalAdminPortalProps> = ({
             <span>KFSH Hospital Enterprise Infrastructure</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-            Hospital Admin Security & Telemetry Portal
+            Hospital Admin Portal: Medical Staff & Security
           </h1>
           <p className="text-xs text-slate-400 font-medium max-w-xl">
-            Real-time monitoring of PWA cryptographic biometrics, active biosensors, clinical staff audit trails, and device state anomalies.
+            Overseeing hospital-linked physicians, active patient loads, cryptographic audit logs, and real-time biometric telemetry thresholds.
           </p>
         </div>
 
         {/* Actions & Live Clock / Heartbeat */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* Live Clock / Heartbeat */}
           <div className="flex items-center gap-3 bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700">
             <div className={`w-3 h-3 rounded-full ${telemetry.isAnomalySpiked ? 'bg-rose-500 animate-ping' : 'bg-emerald-500 animate-pulse'}`} />
             <div className="text-right">
@@ -151,7 +157,6 @@ export const HospitalAdminPortal: React.FC<HospitalAdminPortalProps> = ({
             </div>
           </div>
 
-          {/* Sign Out Action Button */}
           <button
             onClick={onLogout}
             className="px-4 py-3 bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs rounded-2xl shadow-md transition duration-200 flex items-center justify-center gap-2"
@@ -163,31 +168,28 @@ export const HospitalAdminPortal: React.FC<HospitalAdminPortalProps> = ({
 
       {/* Enterprise Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Metric 1 */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Total Active Outpatients</span>
-            <span className="text-2xl font-black text-slate-900">142</span>
-            <span className="text-[10px] text-emerald-600 font-bold block">↑ 14% this month</span>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Linked Hospital Doctors</span>
+            <span className="text-2xl font-black text-slate-900">4 Active Staff</span>
+            <span className="text-[10px] text-emerald-600 font-bold block">All credentials verified</span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+            <Stethoscope className="w-6 h-6" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex items-center justify-between">
+          <div className="space-y-1">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Total Outpatients Assigned</span>
+            <span className="text-2xl font-black text-slate-900">142 Patients</span>
+            <span className="text-[10px] text-slate-500 block">Across 4 departments</span>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
             <Users className="w-6 h-6" />
           </div>
         </div>
 
-        {/* Metric 2 */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Connected Biosensors</span>
-            <span className="text-2xl font-black text-slate-900">4 Active</span>
-            <span className="text-[10px] text-slate-500 block">Telemetry stream live</span>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-            <Cpu className="w-6 h-6" />
-          </div>
-        </div>
-
-        {/* Metric 3 */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Active Clinical Alarms</span>
@@ -201,7 +203,6 @@ export const HospitalAdminPortal: React.FC<HospitalAdminPortalProps> = ({
           </div>
         </div>
 
-        {/* Metric 4 */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Cryptographic Compliance</span>
@@ -217,20 +218,19 @@ export const HospitalAdminPortal: React.FC<HospitalAdminPortalProps> = ({
       {/* Main Panel grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left column - Live patches list */}
+        {/* Left column - Hospital Doctors Linked List */}
         <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4 lg:col-span-2">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="space-y-0.5">
               <h2 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
-                <Activity className="w-5 h-5 text-teal-600" />
-                <span>Live Biosensor Patch Stream (Simulated Hardware)</span>
+                <Stethoscope className="w-5 h-5 text-teal-600" />
+                <span>Hospital Staff: Attending Doctors & Patient Load</span>
               </h2>
               <p className="text-[11px] text-slate-500 font-medium">
-                Live physiological telemetry transmitting from outpatients FIDO2-verified mobile devices.
+                Physicians linked to KFSH Enterprise Hospital and their current outpatient caseloads.
               </p>
             </div>
 
-            {/* Quick Trigger Button inside table */}
             <button
               onClick={onToggleAnomaly}
               className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition flex items-center gap-1.5 shadow-2xs ${
@@ -250,50 +250,34 @@ export const HospitalAdminPortal: React.FC<HospitalAdminPortalProps> = ({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 text-slate-400 font-extrabold text-[10px] uppercase">
-                  <th className="py-2.5">Outpatient Name / MRN</th>
-                  <th className="py-2.5">Heart Rate</th>
-                  <th className="py-2.5">Temperature</th>
-                  <th className="py-2.5">Battery / Signal</th>
-                  <th className="py-2.5 text-right">Alarm Status</th>
+                  <th className="py-2.5">Doctor Name & License</th>
+                  <th className="py-2.5">Specialization</th>
+                  <th className="py-2.5">Department</th>
+                  <th className="py-2.5">Patients Under Care</th>
+                  <th className="py-2.5 text-right">Duty Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {mockSystemPatients.map((p, idx) => (
-                  <tr key={idx} className={`hover:bg-slate-50/50 transition ${p.status === 'critical' ? 'bg-rose-50/40' : ''}`}>
+                {hospitalDoctors.map((doc, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50/50 transition">
                     <td className="py-3">
-                      <div className="font-bold text-slate-900">{p.name}</div>
-                      <div className="text-[10px] font-mono text-slate-400">{p.mrn}</div>
+                      <div className="font-bold text-slate-900">{doc.name}</div>
+                      <div className="text-[10px] font-mono text-slate-400">{doc.licenseNo}</div>
                     </td>
-                    <td className="py-3 font-mono font-extrabold">
-                      <span className={p.status === 'critical' ? 'text-rose-600 text-sm' : 'text-slate-800'}>
-                        {p.heartRate} bpm
-                      </span>
+                    <td className="py-3 font-semibold text-slate-700">
+                      {doc.specialty}
                     </td>
-                    <td className="py-3 font-mono font-extrabold">
-                      <span className={p.status === 'critical' ? 'text-rose-600 text-sm' : 'text-slate-800'}>
-                        {p.temperature} °C
-                      </span>
+                    <td className="py-3 text-slate-600">
+                      {doc.department}
                     </td>
-                    <td className="py-3">
-                      <div className="flex items-center gap-1.5 text-[11px] text-slate-600 font-semibold">
-                        <span className={`px-1.5 py-0.5 rounded font-mono text-[10px] ${p.patchBattery === '12%' ? 'bg-rose-100 text-rose-800 animate-pulse' : 'bg-slate-100'}`}>
-                          🔋 {p.patchBattery}
-                        </span>
-                        <span className="text-[10px]">📡 {p.signalStrength}</span>
-                      </div>
+                    <td className="py-3 font-mono font-extrabold text-teal-800">
+                      {doc.patientsCount} Outpatients
                     </td>
                     <td className="py-3 text-right">
-                      {p.status === 'critical' ? (
-                        <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 font-black text-[10px] tracking-wide inline-flex items-center gap-1">
-                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                          <span>CRITICAL ALERT</span>
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px] inline-flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3 text-emerald-600" />
-                          <span>Normal Stable</span>
-                        </span>
-                      )}
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px] inline-flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3 text-emerald-600" />
+                        <span>{doc.status}</span>
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -367,9 +351,9 @@ export const HospitalAdminPortal: React.FC<HospitalAdminPortalProps> = ({
               ) : (
                 <div className="space-y-1.5 text-slate-400">
                   <p className="text-teal-400 font-extrabold">[SYSTEM OK] Outpatient Cloud Gateway online.</p>
-                  <p>Initializing polling cycle for active biosensor patches...</p>
-                  <p className="text-[9px]">GET /api/v1/telemetry/KFSH-MOCK-992 API response: 200 OK</p>
-                  <p className="text-[9px]">Heart Rate: {telemetry.heartRate} bpm • Temp: {telemetry.temperature} °C</p>
+                  <p>Initializing polling cycle for hospital staff and biosensors...</p>
+                  <p className="text-[9px]">GET /api/v1/hospital/kfsh/doctors API response: 200 OK</p>
+                  <p className="text-[9px]">Active Doctors: 4 • Total Outpatients: 142</p>
                   {telemetry.isAnomalySpiked ? (
                     <p className="text-rose-500 font-black animate-pulse">[THRESHOLD EXCEEDED] HR 134 exceeds limit (120 bpm). Launching crisis notification protocol.</p>
                   ) : (
@@ -381,7 +365,6 @@ export const HospitalAdminPortal: React.FC<HospitalAdminPortalProps> = ({
             </div>
           </div>
 
-          {/* Quick info footer */}
           <div className="pt-3 border-t border-slate-800 text-[10px] text-slate-400 flex items-center gap-2">
             <Database className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
             <span>Encrypted local DB connected safely • Compliant with SCFHS and HIPAA privacy guidelines.</span>

@@ -29,7 +29,7 @@ interface SettingsModalProps {
   currentLang: Language;
   onSelectLang: (lang: Language) => void;
   patient: PatientProfile;
-  authRole?: 'patient' | 'doctor' | 'none';
+  authRole?: 'patient' | 'doctor' | 'admin' | 'none';
   medications: Medication[];
   onSave: (updatedPatient: PatientProfile, updatedMeds: Medication[]) => void;
   onClose: () => void;
@@ -37,6 +37,9 @@ interface SettingsModalProps {
   onToggleSound: () => void;
   systemPermission: boolean;
   onRequestPermission: () => void;
+  showPillNotification: boolean;
+  onToggleShowPillNotification: () => void;
+  onOpenTutorial: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -51,6 +54,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onToggleSound,
   systemPermission,
   onRequestPermission,
+  showPillNotification,
+  onToggleShowPillNotification,
+  onOpenTutorial,
 }) => {
   const [patientData, setPatientData] = useState<PatientProfile>({ ...patient });
   const [medsList, setMedsList] = useState<Medication[]>([...medications]);
@@ -200,36 +206,39 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
                 <div>
-                  <span className="font-bold text-slate-900 block">Browser Notifications</span>
-                  <span className="text-[11px] text-slate-500 capitalize">
-                    Status: <strong className="text-teal-700">{systemPermission ? 'Active' : 'Disabled'}</strong>
+                  <span className="font-bold text-slate-900 block flex items-center gap-1.5">
+                    <Pill className="w-3.5 h-3.5 text-teal-600" />
+                    <span>Pill Notification Badge</span>
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    {showPillNotification ? 'Enabled (Patient Portal)' : 'Hidden'}
                   </span>
                 </div>
                 <button
-                  onClick={handleTestNotification}
-                  className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs shadow-xs transition"
+                  onClick={onToggleShowPillNotification}
+                  className={`px-3 py-1.5 rounded-xl font-bold text-xs transition ${
+                    showPillNotification
+                      ? 'bg-teal-600 text-white hover:bg-teal-500'
+                      : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                  }`}
                 >
-                  {systemPermission ? 'Test Alert' : 'Enable'}
+                  {showPillNotification ? 'Disable' : 'Enable'}
                 </button>
               </div>
 
               <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
                 <div>
-                  <span className="font-bold text-slate-900 block">Web Audio Chime</span>
-                  <span className="text-[11px] text-slate-500">
-                    {soundEnabled ? 'Synth Sound Active' : 'Muted'}
-                  </span>
+                  <span className="font-bold text-slate-900 block">App Walkthrough Tutorial</span>
+                  <span className="text-[11px] text-slate-500">Replay onboarding guide</span>
                 </div>
                 <button
                   onClick={() => {
-                    onToggleSound();
-                    soundEngine.playChime(false);
+                    onClose();
+                    onOpenTutorial();
                   }}
-                  className={`p-2 rounded-xl transition ${
-                    soundEnabled ? 'bg-teal-100 text-teal-800' : 'bg-slate-200 text-slate-600'
-                  }`}
+                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-xs transition"
                 >
-                  {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                  Show Guide
                 </button>
               </div>
             </div>
